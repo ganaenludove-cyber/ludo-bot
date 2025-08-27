@@ -17,6 +17,9 @@ client = gspread.authorize(creds)
 # Abrir hoja de mesas
 spreadsheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0")
 mesas_sheet = spreadsheet.worksheet("mesas")
+saldos_sheet = spreadsheet.worksheet("saldos")
+usuarios = saldos_sheet.get_all_records()
+sin_mesa = [u for u in usuarios if not u.get("mesa_id") or u["mesa_id"] == "pendiente"]
 datos = mesas_sheet.get_all_records()
 
 # Procesar mesas
@@ -38,6 +41,17 @@ for fila in datos:
 st.set_page_config(page_title="Panel Admin", layout="wide")
 st.title("🎮 Panel de Control del Administrador")
 st.subheader("Mesas Activas")
+st.subheader("📢 Sala de espera")
+
+st.write(f"👥 Jugadores sin mesa: {len(sin_mesa)}")
+for u in sin_mesa:
+    st.markdown(f"- @{u['username']}")
+
+mensaje_global = st.text_input("✏️ Mensaje para jugadores sin mesa")
+if st.button("📤 Enviar mensaje global"):
+    st.success("Mensaje enviado a todos los jugadores sin mesa")
+    # Aquí podrías guardar el mensaje en una hoja 'mensajes_globales' si lo deseas
+
 
 # Filtro por estado
 estado_seleccionado = st.selectbox("Filtrar por estado", ["Todos", "en_juego", "pendiente"])
@@ -231,3 +245,4 @@ for i in range(0, len(mesas_filtradas), 3):
     for idx, mesa in enumerate(fila):
         with columnas[idx]:
             render_mesa(mesa)
+
