@@ -19,6 +19,10 @@ spreadsheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0")
 mesas_sheet = spreadsheet.worksheet("mesas")
 saldos_sheet = spreadsheet.worksheet("saldos")
 usuarios = saldos_sheet.get_all_records()
+usuarios = [
+    {k.lower().replace(" ", "_"): v for k, v in fila.items()}
+    for fila in usuarios
+]
 sin_mesa = [u for u in usuarios if not u.get("mesa_id") or u["mesa_id"] == "pendiente"]
 datos = mesas_sheet.get_all_records()
 
@@ -45,7 +49,8 @@ st.subheader("📢 Sala de espera")
 
 st.write(f"👥 Jugadores sin mesa: {len(sin_mesa)}")
 for u in sin_mesa:
-    st.markdown(f"- @{u.get('usuario telegram', 'desconocido')}")
+    nombre = u.get("usuario telegram", "desconocido")
+    st.markdown(f"- @{nombre}")
 
 mensaje_global = st.text_input("✏️ Mensaje para jugadores sin mesa")
 if st.button("📤 Enviar mensaje global"):
@@ -112,7 +117,11 @@ def render_mesa(mesa):
             </div>
     """, unsafe_allow_html=True)
 
+    if mesa.get("jugadores") and len(mesa["jugadores"]) > 0:
     st.markdown(f"👤 <b>Creador:</b> @{mesa['jugadores'][0]}", unsafe_allow_html=True)
+else:
+    st.markdown("👤 <b>Creador:</b> (sin asignar)", unsafe_allow_html=True)
+
 
     col1, col2 = st.columns([1, 2])
 
@@ -245,5 +254,6 @@ for i in range(0, len(mesas_filtradas), 3):
     for idx, mesa in enumerate(fila):
         with columnas[idx]:
             render_mesa(mesa)
+
 
 
