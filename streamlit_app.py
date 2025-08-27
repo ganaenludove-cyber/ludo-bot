@@ -45,7 +45,7 @@ st.subheader("📢 Sala de espera")
 
 st.write(f"👥 Jugadores sin mesa: {len(sin_mesa)}")
 for u in sin_mesa:
-    st.markdown(f"- @{u['username']}")
+    st.markdown(f"- @{u.get('usuario telegram', 'desconocido')}")
 
 mensaje_global = st.text_input("✏️ Mensaje para jugadores sin mesa")
 if st.button("📤 Enviar mensaje global"):
@@ -245,4 +245,5 @@ for i in range(0, len(mesas_filtradas), 3):
     for idx, mesa in enumerate(fila):
         with columnas[idx]:
             render_mesa(mesa)
+
 
