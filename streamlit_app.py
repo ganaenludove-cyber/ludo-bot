@@ -41,7 +41,6 @@ for fila in datos:
     }
     mesas.append(mesa)
 
-
 st.set_page_config(page_title="Panel Admin", layout="wide")
 st.title("🎮 Panel de Control del Administrador")
 st.subheader("Mesas Activas")
@@ -56,7 +55,6 @@ mensaje_global = st.text_input("✏️ Mensaje para jugadores sin mesa")
 if st.button("📤 Enviar mensaje global"):
     st.success("Mensaje enviado a todos los jugadores sin mesa")
     # Aquí podrías guardar el mensaje en una hoja 'mensajes_globales' si lo deseas
-
 
 # Filtro por estado
 estado_seleccionado = st.selectbox("Filtrar por estado", ["Todos", "en_juego", "pendiente"])
@@ -115,14 +113,14 @@ def render_mesa(mesa):
             '>
                 🧩 Mesa #{mesa['id']} — {tipo_label} &nbsp;&nbsp;|&nbsp;&nbsp; Estado: {mesa["estado"].upper()}
             </div>
+        </div>
     """, unsafe_allow_html=True)
 
-        if mesa.get("jugadores") and len(mesa["jugadores"]) > 0:
+    # 👤 Mostrar creador de la mesa
+    if mesa.get("jugadores") and len(mesa["jugadores"]) > 0:
         st.markdown(f"👤 <b>Creador:</b> @{mesa['jugadores'][0]}", unsafe_allow_html=True)
     else:
         st.markdown("👤 <b>Creador:</b> (sin asignar)", unsafe_allow_html=True)
-
-
 
     col1, col2 = st.columns([1, 2])
 
@@ -255,6 +253,7 @@ for i in range(0, len(mesas_filtradas), 3):
     for idx, mesa in enumerate(fila):
         with columnas[idx]:
             render_mesa(mesa)
+
 
 
 
