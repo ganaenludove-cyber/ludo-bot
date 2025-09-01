@@ -253,6 +253,96 @@ for i in range(0, len(mesas_filtradas), 3):
     for idx, mesa in enumerate(fila):
         with columnas[idx]:
             render_mesa(mesa)
+# 🧠 Función para actualizar creador en Google Sheets
+def actualizar_creador_en_sheets(mesa_id, nuevo_creador):
+    try:
+        fila = next(i+2 for i, m in enumerate(datos) if m["ID"] == mesa_id)
+        col = mesas_sheet.find("Jugador 1").col
+        mesas_sheet.update_cell(fila, col, nuevo_creador)
+        st.success(f"✅ Creador actualizado en Sheets para mesa #{mesa_id}")
+    except Exception as e:
+        st.error(f"❌ Error al actualizar creador en Sheets: {e}")
+
+# 🧠 Función para actualizar estado en Sheets
+def actualizar_estado_en_sheets(mesa_id, nuevo_estado):
+    try:
+        fila = next(i+2 for i, m in enumerate(datos) if m["ID"] == mesa_id)
+        col = mesas_sheet.find("Estado").col
+        mesas_sheet.update_cell(fila, col, nuevo_estado)
+        st.success(f"✅ Estado actualizado en Sheets para mesa #{mesa_id}")
+    except Exception as e:
+        st.error(f"❌ Error al actualizar estado en Sheets: {e}")
+
+# 🧠 Función para registrar acción en log_admin
+def registrar_log_accion(mesa_id, accion, usuario_afectado=""):
+    try:
+        log_sheet = spreadsheet.worksheet("log_admin")
+        log_sheet.append_row([mesa_id, accion, usuario_afectado, st.session_state.get("admin_id", "desconocido")])
+    except Exception as e:
+        st.warning(f"⚠️ No se pudo registrar en log_admin: {e}")
+
+# 💸 Función para reembolsar jugadores si mesa está incompleta
+def reembolsar_mesa(mesa):
+    jugadores = mesa["jugadores"]
+    if len(jugadores) < 2:
+        st.warning("⚠️ No se puede reembolsar: mesa vacía")
+        return
+    try:
+        saldos = saldos_sheet.get_all_records()
+        for jugador in jugadores:
+            fila = next((i+2 for i, u in enumerate(saldos) if u.get("usuario telegram") == jugador), None)
+            if fila:
+                col_saldo = saldos_sheet.find("saldo").col
+                saldo_actual = float(saldos_sheet.cell(fila, col_saldo).value)
+                nuevo_saldo = saldo_actual + 1.0  # ejemplo: reembolso de 1 unidad
+                saldos_sheet.update_cell(fila, col_saldo, nuevo_saldo)
+        mesa["estado"] = "cerrada"
+        actualizar_estado_en_sheets(mesa["id"], "cerrada")
+        registrar_log_accion(mesa["id"], "Reembolso automático", ",".join(jugadores))
+        st.success(f"💸 Reembolso aplicado a jugadores de mesa #{mesa['id']}")
+    except Exception as e:
+        st.error(f"❌ Error al aplicar reembolso: {e}")
+
+# 🔧 Añadir controles extra en render_botones
+def render_botones(mesa):
+    col1, col2 = st.columns(2)
+    with col1:
+        nuevo_creador = st.selectbox("👤 Nuevo creador", mesa["jugadores"], key=f"nuevo_creador_{mesa['id']}")
+        if st.button("✅ Cambiar creador", key=f"btn_cambiar_creador_{mesa['id']}"):
+            mesa["creador"] = nuevo_creador
+            actualizar_creador_en_sheets(mesa["id"], nuevo_creador)
+            registrar_log_accion(mesa["id"], "Cambio de creador", nuevo_creador)
+
+        nuevo_estado = st.selectbox("📌 Cambiar estado", ["pendiente", "en_juego", "cerrada"], key=f"estado_{mesa['id']}")
+        if st.button("🔄 Actualizar estado", key=f"btn_estado_{mesa['id']}"):
+            mesa["estado"] = nuevo_estado
+            actualizar_estado_en_sheets(mesa["id"], nuevo_estado)
+            registrar_log_accion(mesa["id"], "Cambio de estado", nuevo_estado)
+
+    with col2:
+        jugador_descalificar = st.selectbox("🚫 Descalificar jugador", mesa["jugadores"], key=f"descalificar_{mesa['id']}")
+        if st.button("❌ Descalificar", key=f"btn_descalificar_{mesa['id']}"):
+            if jugador_descalificar in mesa["jugadores"]:
+                mesa["jugadores"].remove(jugador_descalificar)
+                mesa["estado"] = "pendiente"
+                mesa["mensajes"].append({
+                    "de": "Admin",
+                    "para": jugador_descalificar,
+                    "texto": f"Has sido descalificado de la mesa #{mesa['id']}."
+                })
+                mesa["mensajes"].append({
+                    "de": "Admin",
+                    "para": "Todos",
+                    "texto": f"{jugador_descalificar} fue descalificado. La partida debe repetirse."
+                })
+                actualizar_estado_en_sheets(mesa["id"], "pendiente")
+                registrar_log_accion(mesa["id"], "Descalificación", jugador_descalificar)
+                st.warning(f"Mesa #{mesa['id']}: {jugador_descalificar} descalificado.")
+            else:
+                st.error("Ese jugador ya no está en la mesa.")
+
+        if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
+            reembolsar_mesa(mesa)
 
 
 
