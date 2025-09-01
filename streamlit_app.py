@@ -46,10 +46,32 @@ st.title("🎮 Panel de Control del Administrador")
 st.subheader("Mesas Activas")
 st.subheader("📢 Sala de espera")
 
-st.write(f"👥 Jugadores sin mesa: {len(sin_mesa)}")
-for u in sin_mesa:
-    nombre = u.get("usuario telegram", "desconocido")
-    st.markdown(f"- @{nombre}")
+# 📢 Sala de espera — ahora como bandeja de entrada
+st.subheader("📢 Sala de espera")
+
+preguntas_pendientes = st.session_state.get("preguntas_pendientes", [])
+st.session_state["preguntas_pendientes"] = [
+    {"usuario": "jugador1", "id": "123456", "texto": "¿Cuándo empieza la partida?"},
+    {"usuario": "jugador2", "id": "789012", "texto": "No me asignaron mesa"}
+]
+
+if preguntas_pendientes:
+    for i, p in enumerate(preguntas_pendientes):
+        st.markdown(f"""
+        <div style='background-color:#222;padding:12px;border-radius:10px;margin-bottom:10px;'>
+            <b>👤 @{p['usuario']}</b><br>
+            🆔 {p['id']}<br>
+            💬 {p['texto']}
+        </div>
+        """, unsafe_allow_html=True)
+
+        respuesta = st.text_input(f"✏️ Responder a @{p['usuario']}", key=f"respuesta_{i}")
+        if st.button(f"📤 Enviar respuesta", key=f"btn_respuesta_{i}"):
+            st.success(f"📨 Respuesta enviada a @{p['usuario']}")
+            # Aquí podrías guardar la respuesta en una hoja 'respuestas_admin' o eliminar la pregunta
+else:
+    st.info("✅ No hay preguntas pendientes.")
+
 
 mensaje_global = st.text_input("✏️ Mensaje para jugadores sin mesa")
 if st.button("📤 Enviar mensaje global"):
@@ -343,6 +365,7 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
 
 
 
