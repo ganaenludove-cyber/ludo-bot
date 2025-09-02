@@ -17,6 +17,11 @@ if "firebase" not in st.secrets or "google" not in st.secrets:
     st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
     st.stop()
 
+# ✅ Validar que la sección [google] sea un dict
+if not isinstance(st.secrets["google"], dict):
+    st.error("❌ La sección [google] no está bien formateada. Asegúrate de que el bloque en secrets tenga saltos reales y no \\n.")
+    st.stop()
+
 # 🔐 Autenticación con Google Sheets usando clave TOML estándar
 scope = [
     "https://spreadsheets.google.com/feeds",
@@ -26,9 +31,6 @@ scope = [
 ]
 
 creds_dict = st.secrets["google"].copy()
-if "\\n" in creds_dict["private_key"]:
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
@@ -483,7 +485,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
 
 
 
