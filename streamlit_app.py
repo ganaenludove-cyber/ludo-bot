@@ -4,7 +4,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime
-import json
 
 # ⚙️ Configuración visual del panel
 st.set_page_config(page_title="Panel Admin", layout="wide")
@@ -14,11 +13,11 @@ st.subheader("📢 Sala de espera")
 
 # 🔍 Verificar que las claves estén disponibles
 st.write("🔍 Secciones disponibles en secrets:", list(st.secrets.keys()))
-if "firebase" not in st.secrets or "google_json" not in st.secrets:
-    st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google_json] estén definidos en Secrets.")
+if "firebase" not in st.secrets or "google" not in st.secrets:
+    st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
     st.stop()
 
-# 🔐 Autenticación con Google Sheets usando JSON plano
+# 🔐 Autenticación con Google Sheets usando clave TOML estándar
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -26,8 +25,10 @@ scope = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-raw_json = st.secrets["google_json"]["key"]
-creds_dict = json.loads(raw_json)
+creds_dict = st.secrets["google"].copy()
+if "\\n" in creds_dict["private_key"]:
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
@@ -104,12 +105,6 @@ def guardar_mensaje_en_firebase(mesa_id, mensaje):
         ref.push(mensaje)
     except Exception as e:
         st.error(f"❌ Error al guardar mensaje en Firebase: {e}")
-
-# 🧪 Utilidad para convertir claves con \n en saltos reales (solo si lo necesitas)
-def format_private_key(raw_key):
-    import json
-    parsed = json.loads(f'"{raw_key}"')
-    return f'"""{parsed}"""'
 
 # 🧾 Vista previa de clave (opcional para depurar)
 st.text_area("🔐 Clave Google (preview)", creds_dict["private_key"], height=200)
@@ -488,6 +483,9 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
+
 
 
 
