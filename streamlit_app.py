@@ -12,6 +12,8 @@ st.subheader("Mesas Activas")
 st.subheader("📢 Sala de espera")
 
 # 🔍 Verificar que las claves estén disponibles
+st.write("🔍 google es tipo:", type(st.secrets["google"]))
+st.write("🔑 google keys:", getattr(st.secrets["google"], "keys", lambda: "❌ No es dict")())
 st.write("🔍 Secciones disponibles en secrets:", list(st.secrets.keys()))
 if "firebase" not in st.secrets or "google" not in st.secrets:
     st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
@@ -27,7 +29,7 @@ scope = [
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive",
 ]
-creds_dict = st.secrets["google"].copy()
+creds_dict = st.secrets["google"].to_dict()
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
@@ -503,7 +505,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
 
 
 
