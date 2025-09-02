@@ -3,7 +3,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import firebase_admin
 from firebase_admin import credentials, db
-import datetime  # para timestamp en logs
+from datetime import datetime  # ✅ Importación corregida
 
 # 🔐 Autenticación con Google Sheets
 scope = [
@@ -174,7 +174,7 @@ def registrar_reembolso_en_firebase(mesa_id, jugadores):
             "mesa_id": mesa_id,
             "jugadores": jugadores,
             "admin": st.session_state.get("admin_id", "desconocido"),
-            "timestamp": datetime.datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
         st.warning(f"⚠️ No se pudo registrar reembolso en Firebase: {e}")
@@ -465,9 +465,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
-
-
 
 
 
