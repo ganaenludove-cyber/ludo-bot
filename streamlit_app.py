@@ -17,7 +17,8 @@ scope = [
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive",
 ]
-creds_dict = st.secrets["google"]
+creds_dict = st.secrets["google"].copy()
+creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
@@ -32,6 +33,15 @@ usuarios = [
 ]
 sin_mesa = [u for u in usuarios if not u.get("mesa_id") or u["mesa_id"] == "pendiente"]
 datos = mesas_sheet.get_all_records()
+
+# 🔌 Inicializar Firebase correctamente
+if not firebase_admin._apps:
+    cred_dict = st.secrets["firebase"].copy()
+    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+    cred = credentials.Certificate(cred_dict)
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': cred_dict["databaseURL"]
+    })
 
 # 🧩 Procesar mesas
 mesas = []
@@ -474,6 +484,8 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
 
 
 
