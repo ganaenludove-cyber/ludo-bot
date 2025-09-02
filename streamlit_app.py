@@ -61,7 +61,9 @@ import datetime  # para timestamp en logs
 
 # Inicializar Firebase solo una vez
 if not firebase_admin._apps:
-    cred = credentials.Certificate("creds/clave_firebase.json")  # ajusta si usas st.secrets
+    cred_dict = st.secrets["firebase"]
+    cred = credentials.Certificate(cred_dict)
+ # ajusta si usas st.secrets
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://panel-admin-7bdd2.firebaseio.com'
     })
@@ -453,11 +455,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
-
-
-
-
 
 
 
