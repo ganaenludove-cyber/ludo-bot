@@ -33,7 +33,6 @@ creds_dict = st.secrets["google"].to_dict()
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-
 # 🧪 Validación rápida: leer celda A1
 try:
     test_sheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0").worksheet("mesas")
@@ -64,6 +63,68 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
         'databaseURL': cred_dict["databaseURL"]
     })
+
+# 🧠 Función para registrar acciones en Firebase
+def registrar_accion_en_firebase(tipo, datos):
+    ref = db.reference("acciones_pendientes")
+    ref.push({
+        "tipo": tipo,
+        "datos": datos,
+        "timestamp": datetime.now().isoformat(),
+        "admin": st.session_state.get("admin_id", "desconocido")
+    })
+
+# 🎛️ Sección: Entregar premio
+st.markdown("## 🏆 Entregar premio")
+usuario = st.text_input("Usuario ganador (@usuario)")
+monto = st.number_input("Monto del premio", min_value=0.0, step=0.5)
+mesa_id = st.number_input("ID de la mesa", min_value=1)
+tipo_mesa = st.selectbox("Tipo de mesa", ["2vs2", "1vs1", "Libre"])
+if st.button("✅ Registrar premio"):
+    registrar_accion_en_firebase("premio", {
+        "usuario": usuario,
+        "monto": monto,
+        "mesa_id": mesa_id,
+        "tipo_mesa": tipo_mesa
+    })
+    st.success(f"Premio registrado para {usuario}")
+
+# 💬 Sección: Enviar mensaje
+st.markdown("## 📩 Enviar mensaje")
+texto = st.text_area("Mensaje")
+destino = st.selectbox("Destino", ["Todos", "Equipo A", "Equipo B", "Jugador específico"])
+jugadores = [u["usuario"] for u in usuarios if u.get("mesa_id") == mesa_id]
+jugador_especifico = st.text_input("Jugador específico (@usuario)") if destino == "Jugador específico" else ""
+if st.button("📨 Enviar mensaje"):
+    registrar_accion_en_firebase("mensaje", {
+        "mesa_id": mesa_id,
+        "texto": texto,
+        "para": jugador_especifico if destino == "Jugador específico" else destino,
+        "jugadores": jugadores
+    })
+    st.success("Mensaje registrado")
+
+# 💸 Sección: Reembolsar jugadores
+st.markdown("## 💸 Reembolsar jugadores")
+monto_reembolso = st.number_input("Monto a reembolsar", min_value=0.0, step=0.5)
+if st.button("🔁 Reembolsar"):
+    registrar_accion_en_firebase("reembolso", {
+        "mesa_id": mesa_id,
+        "jugadores": jugadores,
+        "monto": monto_reembolso
+    })
+    st.success("Reembolso registrado")
+
+# 📬 Sección: Responder pregunta privada
+st.markdown("## 📬 Responder pregunta privada")
+id_usuario = st.text_input("ID del jugador")
+respuesta = st.text_area("Respuesta")
+if st.button("📤 Enviar respuesta"):
+    registrar_accion_en_firebase("respuesta", {
+        "id": id_usuario,
+        "texto": respuesta
+    })
+    st.success("Respuesta enviada")
 
 # 🧩 Procesar mesas
 mesas = []
@@ -505,6 +566,7 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
 
 
 
