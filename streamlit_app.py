@@ -20,24 +20,32 @@ if "firebase" not in st.secrets or "google" not in st.secrets:
 # ✅ Mostrar tipo de st.secrets["google"] para diagnóstico
 st.write("✅ Tipo de google:", type(st.secrets["google"]))
 
-# ✅ Validar que la sección [google] sea un dict
-if not isinstance(st.secrets["google"], dict):
+# ✅ Validar que la sección [google] tenga método .copy()
+if not hasattr(st.secrets["google"], "copy"):
     st.error("❌ La sección [google] no está bien formateada. Asegúrate de que el bloque en secrets tenga saltos reales y no \\n.")
     st.stop()
 
-# 🔐 Autenticación con Google Sheets usando clave TOML estándar
+# 🔐 Autenticación con Google Sheets
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive",
 ]
-
 creds_dict = st.secrets["google"].copy()
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-# 📄 Abrir hoja de mesas
+# 🧪 Validación rápida: leer celda A1
+try:
+    test_sheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0").worksheet("mesas")
+    valor = test_sheet.acell("A1").value
+    st.success(f"✅ Conexión con Google Sheets exitosa. Valor en A1: {valor}")
+except Exception as e:
+    st.error(f"❌ Error al acceder a la hoja: {e}")
+    st.stop()
+
+# 📄 Abrir hojas
 spreadsheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0")
 mesas_sheet = spreadsheet.worksheet("mesas")
 saldos_sheet = spreadsheet.worksheet("saldos")
@@ -49,7 +57,7 @@ usuarios = [
 sin_mesa = [u for u in usuarios if not u.get("mesa_id") or u["mesa_id"] == "pendiente"]
 datos = mesas_sheet.get_all_records()
 
-# 🔌 Inicializar Firebase correctamente
+# 🔌 Inicializar Firebase
 if not firebase_admin._apps:
     cred_dict = st.secrets["firebase"].copy()
     if "\\n" in cred_dict["private_key"]:
@@ -58,7 +66,6 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
         'databaseURL': cred_dict["databaseURL"]
     })
-
 
 # 🧩 Procesar mesas
 mesas = []
@@ -74,7 +81,7 @@ for fila in datos:
         "mensajes": []
     }
 
-    # 🔄 Cargar mensajes desde Firebase por mesa
+    # 🔄 Cargar mensajes desde Firebase
     try:
         ref = db.reference(f"mensajes/{mesa['id']}")
         mensajes = ref.get()
@@ -83,6 +90,17 @@ for fila in datos:
         mesa["mensajes"] = []
 
     mesas.append(mesa)
+
+# 🖥️ Mostrar mesas activas
+for mesa in mesas:
+    with st.expander(f"🧩 Mesa {mesa['id']} - {mesa['tipo']} - {mesa['estado']}"):
+        st.write("👥 Jugadores:", ", ".join(mesa["jugadores"]))
+        if mesa["mensajes"]:
+            st.write("💬 Mensajes:")
+            for msg in mesa["mensajes"]:
+                st.markdown(f"- {msg}")
+        else:
+            st.info("Sin mensajes registrados.")
 
 # 📥 Preguntas pendientes simuladas
 preguntas_pendientes = st.session_state.get("preguntas_pendientes", [])
@@ -489,8 +507,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
-
 
 
 
