@@ -5,6 +5,11 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime  # ✅ Importación corregida
 
+# ✅ Verificar que las claves estén disponibles
+if "firebase" not in st.secrets or "google" not in st.secrets:
+    st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
+    st.stop()
+
 # 🔐 Autenticación con Google Sheets
 scope = [
     "https://spreadsheets.google.com/feeds",
@@ -61,7 +66,7 @@ if not firebase_admin._apps:
     cred_dict = st.secrets["firebase"]
     cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://panel-admin-7bdd2.firebaseio.com'
+        'databaseURL': cred_dict["databaseURL"]
     })
 
 # 🧪 Probar conexión con log de inicio
@@ -69,13 +74,13 @@ try:
     test_ref = db.reference("test_bot")
     test_ref.set({
         "mensaje": "Bot conectado correctamente",
-        "timestamp": datetime.datetime.now().isoformat(),
+        "timestamp": datetime.now().isoformat(),
         "origen": "streamlit_app.py",
         "admin_id": st.session_state.get("admin_id", "desconocido")
     })
-    print("✅ Conexión a Firebase exitosa")
+    st.success("✅ Conexión a Firebase exitosa")
 except Exception as e:
-    print(f"❌ Error conectando a Firebase: {e}")
+    st.error(f"❌ Error conectando a Firebase: {e}")
 
 # Cargar mensajes desde Firebase
 try:
@@ -84,12 +89,14 @@ try:
     mesa["mensajes"] = list(mensajes.values()) if mensajes else []
 except Exception as e:
     mesa["mensajes"] = []
+
 def guardar_mensaje_en_firebase(mesa_id, mensaje):
     try:
         ref = db.reference(f"mensajes/{mesa_id}")
         ref.push(mensaje)
     except Exception as e:
         st.error(f"❌ Error al guardar mensaje en Firebase: {e}")
+
 
 def responder_pregunta_por_id(id_pregunta, respuesta):
     try:
@@ -465,6 +472,10 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
+
+
 
 
 
