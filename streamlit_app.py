@@ -8,19 +8,6 @@ from datetime import datetime
 # ⚙️ Configuración visual del panel
 st.set_page_config(page_title="Panel Admin", layout="wide")
 st.title("🎮 Panel de Control del Administrador")
-st.subheader("Mesas Activas")
-st.subheader("📢 Sala de espera")
-
-# 🔍 Verificar que las claves estén disponibles
-st.write("🔍 google es tipo:", type(st.secrets["google"]))
-st.write("🔑 google keys:", getattr(st.secrets["google"], "keys", lambda: "❌ No es dict")())
-st.write("🔍 Secciones disponibles en secrets:", list(st.secrets.keys()))
-if "firebase" not in st.secrets or "google" not in st.secrets:
-    st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
-    st.stop()
-
-# ✅ Mostrar tipo de st.secrets["google"] para diagnóstico
-st.write("✅ Tipo de google:", type(st.secrets["google"]))
 
 # 🔐 Autenticación con Google Sheets
 scope = [
@@ -33,15 +20,6 @@ creds_dict = st.secrets["google"].to_dict()
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-# 🧪 Validación rápida: leer celda A1
-try:
-    test_sheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0").worksheet("mesas")
-    valor = test_sheet.acell("A1").value
-    st.success(f"✅ Conexión con Google Sheets exitosa. Valor en A1: {valor}")
-except Exception as e:
-    st.error(f"❌ Error al acceder a la hoja: {e}")
-    st.stop()
-
 # 📄 Abrir hojas
 spreadsheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0")
 mesas_sheet = spreadsheet.worksheet("mesas")
@@ -51,7 +29,6 @@ usuarios = [
     {k.lower().replace(" ", "_"): v for k, v in fila.items()}
     for fila in usuarios
 ]
-sin_mesa = [u for u in usuarios if not u.get("mesa_id") or u["mesa_id"] == "pendiente"]
 datos = mesas_sheet.get_all_records()
 
 # 🔌 Inicializar Firebase
@@ -114,6 +91,7 @@ if st.button("🔁 Reembolsar"):
         "monto": monto_reembolso
     })
     st.success("Reembolso registrado")
+
 
 # 📬 Sección: Responder pregunta privada
 st.markdown("## 📬 Responder pregunta privada")
@@ -566,13 +544,4 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
-
-
-
-
-
-
-
-
 
