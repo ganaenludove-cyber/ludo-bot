@@ -63,7 +63,8 @@ st.session_state["preguntas_pendientes"] = [
 
 # 🔌 Inicializar Firebase correctamente
 if not firebase_admin._apps:
-    cred_dict = st.secrets["firebase"]
+    cred_dict = st.secrets["firebase"].copy()
+    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
     cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred, {
         'databaseURL': cred_dict["databaseURL"]
@@ -96,6 +97,7 @@ def guardar_mensaje_en_firebase(mesa_id, mensaje):
         ref.push(mensaje)
     except Exception as e:
         st.error(f"❌ Error al guardar mensaje en Firebase: {e}")
+
 
 
 def responder_pregunta_por_id(id_pregunta, respuesta):
