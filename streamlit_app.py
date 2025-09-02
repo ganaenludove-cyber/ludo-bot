@@ -17,6 +17,9 @@ if "firebase" not in st.secrets or "google" not in st.secrets:
     st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
     st.stop()
 
+# ✅ Mostrar tipo de st.secrets["google"] para diagnóstico
+st.write("✅ Tipo de google:", type(st.secrets["google"]))
+
 # ✅ Validar que la sección [google] sea un dict
 if not isinstance(st.secrets["google"], dict):
     st.error("❌ La sección [google] no está bien formateada. Asegúrate de que el bloque en secrets tenga saltos reales y no \\n.")
@@ -55,6 +58,7 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
         'databaseURL': cred_dict["databaseURL"]
     })
+
 
 # 🧩 Procesar mesas
 mesas = []
@@ -485,10 +489,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
-
-
-
 
 
 
