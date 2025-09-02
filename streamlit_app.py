@@ -3,9 +3,16 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import firebase_admin
 from firebase_admin import credentials, db
-from datetime import datetime  # ✅ Importación corregida
+from datetime import datetime
+
+# ⚙️ Configuración visual del panel
+st.set_page_config(page_title="Panel Admin", layout="wide")
+st.title("🎮 Panel de Control del Administrador")
+st.subheader("Mesas Activas")
+st.subheader("📢 Sala de espera")
+
+# 🔍 Verificar que las claves estén disponibles
 st.write("🔍 Secciones disponibles en secrets:", list(st.secrets.keys()))
-# ✅ Verificar que las claves estén disponibles
 if "firebase" not in st.secrets or "google" not in st.secrets:
     st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
     st.stop()
@@ -18,7 +25,8 @@ scope = [
     "https://www.googleapis.com/auth/drive",
 ]
 creds_dict = st.secrets["google"].copy()
-creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+if "\\n" in creds_dict["private_key"]:
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
@@ -37,7 +45,8 @@ datos = mesas_sheet.get_all_records()
 # 🔌 Inicializar Firebase correctamente
 if not firebase_admin._apps:
     cred_dict = st.secrets["firebase"].copy()
-    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+    if "\\n" in cred_dict["private_key"]:
+        cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
     cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred, {
         'databaseURL': cred_dict["databaseURL"]
@@ -54,15 +63,18 @@ for fila in datos:
         "tipo": tipo,
         "creador": jugadores[0] if jugadores else "Desconocido",
         "jugadores": jugadores,
-        "mensajes": []  # Puedes poblar esto si tienes una hoja de mensajes
+        "mensajes": []
     }
-    mesas.append(mesa)
 
-# ⚙️ Configuración visual del panel
-st.set_page_config(page_title="Panel Admin", layout="wide")
-st.title("🎮 Panel de Control del Administrador")
-st.subheader("Mesas Activas")
-st.subheader("📢 Sala de espera")
+    # 🔄 Cargar mensajes desde Firebase por mesa
+    try:
+        ref = db.reference(f"mensajes/{mesa['id']}")
+        mensajes = ref.get()
+        mesa["mensajes"] = list(mensajes.values()) if mensajes else []
+    except Exception:
+        mesa["mensajes"] = []
+
+    mesas.append(mesa)
 
 # 📥 Preguntas pendientes simuladas
 preguntas_pendientes = st.session_state.get("preguntas_pendientes", [])
@@ -71,13 +83,12 @@ st.session_state["preguntas_pendientes"] = [
     {"usuario": "jugador2", "id": "789012", "texto": "No me asignaron mesa"}
 ]
 
-
 # 🧪 Probar conexión con log de inicio
 try:
     test_ref = db.reference("test_bot")
     test_ref.set({
         "mensaje": "Bot conectado correctamente",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "origen": "streamlit_app.py",
         "admin_id": st.session_state.get("admin_id", "desconocido")
     })
@@ -85,14 +96,7 @@ try:
 except Exception as e:
     st.error(f"❌ Error conectando a Firebase: {e}")
 
-# Cargar mensajes desde Firebase
-try:
-    ref = db.reference(f"mensajes/{mesa['id']}")
-    mensajes = ref.get()
-    mesa["mensajes"] = list(mensajes.values()) if mensajes else []
-except Exception as e:
-    mesa["mensajes"] = []
-
+# 💾 Función para guardar mensajes en Firebase
 def guardar_mensaje_en_firebase(mesa_id, mensaje):
     try:
         ref = db.reference(f"mensajes/{mesa_id}")
@@ -100,16 +104,14 @@ def guardar_mensaje_en_firebase(mesa_id, mensaje):
     except Exception as e:
         st.error(f"❌ Error al guardar mensaje en Firebase: {e}")
 
-# Convierte una clave con \n en saltos reales para usar en TOML
+# 🧪 Utilidad para convertir claves con \n en saltos reales (solo si lo necesitas)
 def format_private_key(raw_key):
     import json
-    parsed = json.loads(f'"{raw_key}"')  # interpreta los \n como saltos reales
+    parsed = json.loads(f'"{raw_key}"')
     return f'"""{parsed}"""'
 
-# Ejemplo de uso
-raw_key = "-----BEGIN PRIVATE KEY-----\\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCWFBrVN23r3XeG\\n...\\n-----END PRIVATE KEY-----\\n"
-print(format_private_key(raw_key))
-
+# 🧾 Vista previa de clave (opcional para depurar)
+st.text_area("🔐 Clave Google (preview)", creds_dict["private_key"], height=200)
 
 def responder_pregunta_por_id(id_pregunta, respuesta):
     try:
@@ -485,6 +487,8 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
 
 
 
