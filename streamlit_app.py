@@ -20,11 +20,6 @@ if "firebase" not in st.secrets or "google" not in st.secrets:
 # ✅ Mostrar tipo de st.secrets["google"] para diagnóstico
 st.write("✅ Tipo de google:", type(st.secrets["google"]))
 
-# ✅ Validar que la sección [google] tenga método .copy()
-if not hasattr(st.secrets["google"], "copy"):
-    st.error("❌ La sección [google] no está bien formateada. Asegúrate de que el bloque en secrets tenga saltos reales y no \\n.")
-    st.stop()
-
 # 🔐 Autenticación con Google Sheets
 scope = [
     "https://spreadsheets.google.com/feeds",
@@ -35,6 +30,7 @@ scope = [
 creds_dict = st.secrets["google"].copy()
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
+
 
 # 🧪 Validación rápida: leer celda A1
 try:
@@ -507,6 +503,9 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
+
 
 
 
