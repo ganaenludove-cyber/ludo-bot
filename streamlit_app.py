@@ -55,6 +55,46 @@ st.session_state["preguntas_pendientes"] = [
     {"usuario": "jugador2", "id": "789012", "texto": "No me asignaron mesa"}
 ]
 
+import firebase_admin
+from firebase_admin import credentials, db
+import datetime  # para timestamp en logs
+
+# Inicializar Firebase solo una vez
+if not firebase_admin._apps:
+    cred = credentials.Certificate("creds/clave_firebase.json")  # ajusta si usas st.secrets
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': 'https://panel-admin-7bdd2.firebaseio.com'
+    })
+# Cargar mensajes desde Firebase
+try:
+    ref = db.reference(f"mensajes/{mesa['id']}")
+    mensajes = ref.get()
+    mesa["mensajes"] = list(mensajes.values()) if mensajes else []
+except Exception as e:
+    mesa["mensajes"] = []
+def guardar_mensaje_en_firebase(mesa_id, mensaje):
+    try:
+        ref = db.reference(f"mensajes/{mesa_id}")
+        ref.push(mensaje)
+    except Exception as e:
+        st.error(f"❌ Error al guardar mensaje en Firebase: {e}")
+
+def responder_pregunta_por_id(id_pregunta, respuesta):
+    try:
+        ref = db.reference("preguntas")
+        todas = ref.get()
+        for clave, pregunta in todas.items():
+            if pregunta["id"] == id_pregunta:
+                ref.child(clave).update({
+                    "respuesta": respuesta,
+                    "estado": "respondida",
+                    "respondido_por": st.session_state.get("admin_id", "desconocido"),
+                    "timestamp_respuesta": datetime.datetime.now().isoformat()
+                })
+                break
+    except Exception as e:
+        st.error(f"❌ Error al guardar respuesta: {e}")
+
 if preguntas_pendientes:
     for i, p in enumerate(preguntas_pendientes):
         st.markdown(f"""
@@ -67,10 +107,14 @@ if preguntas_pendientes:
 
         respuesta = st.text_input(f"✏️ Responder a @{p['usuario']}", key=f"respuesta_{i}")
         if st.button(f"📤 Enviar respuesta", key=f"btn_respuesta_{i}"):
-            st.success(f"📨 Respuesta enviada a @{p['usuario']}")
-            # Aquí podrías guardar la respuesta en una hoja 'respuestas_admin' o eliminar la pregunta
+            if respuesta.strip():
+                responder_pregunta_por_id(p["id"], respuesta)
+                st.success(f"📨 Respuesta enviada a @{p['usuario']}")
+            else:
+                st.warning("⚠️ La respuesta no puede estar vacía.")
 else:
     st.info("✅ No hay preguntas pendientes.")
+
 
 
 mensaje_global = st.text_input("✏️ Mensaje para jugadores sin mesa")
@@ -99,6 +143,30 @@ st.markdown("""
 .player-msg {background-color: #f9fafb; padding: 5px; border-radius: 5px; margin-bottom: 4px;}
 </style>
 """, unsafe_allow_html=True)
+def responder_pregunta(id_pregunta, respuesta):
+    try:
+        ref = db.reference(f"preguntas/{id_pregunta}")
+        ref.update({
+            "respuesta": respuesta,
+            "estado": "respondida",
+            "respondido_por": st.session_state.get("admin_id", "desconocido"),
+            "timestamp_respuesta": datetime.datetime.now().isoformat()
+        })
+    except Exception as e:
+        st.error(f"❌ Error al responder pregunta: {e}")
+
+def registrar_reembolso_en_firebase(mesa_id, jugadores):
+    try:
+        ref = db.reference("reembolsos")
+        ref.push({
+            "mesa_id": mesa_id,
+            "jugadores": jugadores,
+            "admin": st.session_state.get("admin_id", "desconocido"),
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+    except Exception as e:
+        st.warning(f"⚠️ No se pudo registrar reembolso en Firebase: {e}")
+
 
 # Funciones modulares
 def render_mesa(mesa):
@@ -177,6 +245,7 @@ def render_mesa(mesa):
         jugador_descalificar = st.selectbox("Selecciona jugador", mesa["jugadores"][1:], key=f"descalificar_{mesa['id']}")
         if st.button("❌ Descalificar", key=f"btn_descalificar_{mesa['id']}"):
             mesa["jugadores"].remove(jugador_descalificar)
+            eliminar_jugador_en_sheets(mesa["id"], jugador_descalificar)
             st.warning(f"⚠️ @{jugador_descalificar} ha sido descalificado de la mesa #{mesa['id']}")
 
     with col2:
@@ -194,6 +263,14 @@ def render_jugadores(mesa):
         st.markdown(f"<div style='background-color:#444; color:white; padding:6px 10px; border-radius:6px; font-size:13px; display:inline-block; margin-bottom:4px;'>{icono_equipo} {jugador}</div>", unsafe_allow_html=True)
 
 def render_chat(mesa):
+    # 🔄 Sincronizar mensajes desde Firebase
+    try:
+        ref = db.reference(f"mensajes/{mesa['id']}")
+        mensajes = ref.get()
+        mesa["mensajes"] = list(mensajes.values()) if mensajes else []
+    except Exception as e:
+        mesa["mensajes"] = []
+
     st.markdown("💬 <b>Chat de la mesa:</b>", unsafe_allow_html=True)
 
     chat_html = "<div style='background-color:#111;padding:16px;border-radius:12px;height:300px;overflow-y:auto;font-size:12px;margin-bottom:12px;display:flex;flex-direction:column;'>"
@@ -217,6 +294,7 @@ def render_chat(mesa):
     chat_html += "</div>"
     st.markdown(chat_html, unsafe_allow_html=True)
 
+    # 📤 Envío de nuevo mensaje
     opciones_destino = ["Todos"]
 
     if mesa["tipo"] == "2v2" and len(mesa["jugadores"]) == 4:
@@ -236,11 +314,10 @@ def render_chat(mesa):
                 "texto": mensaje_respuesta
             }
             mesa["mensajes"].append(nuevo_mensaje)
+            guardar_mensaje_en_firebase(mesa["id"], nuevo_mensaje)
             st.success(f"📨 Mensaje enviado a {destinatario} en mesa #{mesa['id']}")
         else:
             st.warning("⚠️ Escribe un mensaje antes de enviar")
-
-
 def render_botones(mesa):
     col1, col2 = st.columns(2)
     with col1:
@@ -305,6 +382,7 @@ def registrar_log_accion(mesa_id, accion, usuario_afectado=""):
 
 # 💸 Función para reembolsar jugadores si mesa está incompleta
 def reembolsar_mesa(mesa):
+    registrar_reembolso_en_firebase(mesa["id"], jugadores)
     jugadores = mesa["jugadores"]
     if len(jugadores) < 2:
         st.warning("⚠️ No se puede reembolsar: mesa vacía")
@@ -324,6 +402,16 @@ def reembolsar_mesa(mesa):
         st.success(f"💸 Reembolso aplicado a jugadores de mesa #{mesa['id']}")
     except Exception as e:
         st.error(f"❌ Error al aplicar reembolso: {e}")
+def eliminar_jugador_en_sheets(mesa_id, jugador):
+    try:
+        fila = next(i+2 for i, m in enumerate(datos) if m["ID"] == mesa_id)
+        for i in range(1, 5):
+            col = mesas_sheet.find(f"Jugador {i}").col
+            if mesas_sheet.cell(fila, col).value == jugador:
+                mesas_sheet.update_cell(fila, col, "")
+                break
+    except Exception as e:
+        st.error(f"❌ Error al eliminar jugador en Sheets: {e}")
 
 # 🔧 Añadir controles extra en render_botones
 def render_botones(mesa):
@@ -365,6 +453,10 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
+
+
 
 
 
