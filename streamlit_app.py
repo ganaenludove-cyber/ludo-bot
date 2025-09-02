@@ -4,7 +4,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime  # ✅ Importación corregida
-
+st.write("🔍 Secciones disponibles en secrets:", list(st.secrets.keys()))
 # ✅ Verificar que las claves estén disponibles
 if "firebase" not in st.secrets or "google" not in st.secrets:
     st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
@@ -476,9 +476,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
-
-
 
 
 
