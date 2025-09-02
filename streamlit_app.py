@@ -1,20 +1,22 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import firebase_admin
+from firebase_admin import credentials, db
+import datetime  # para timestamp en logs
 
-# Autenticación con Google Sheets
+# 🔐 Autenticación con Google Sheets
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive",
 ]
-# Usar secrets en lugar de archivo físico
 creds_dict = st.secrets["google"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-# Abrir hoja de mesas
+# 📄 Abrir hoja de mesas
 spreadsheet = client.open_by_key("1kN5ZFVRgJIBpIaXgRWIJrO2DGmjIh-w-L2P0f_Qfxx0")
 mesas_sheet = spreadsheet.worksheet("mesas")
 saldos_sheet = spreadsheet.worksheet("saldos")
@@ -26,7 +28,7 @@ usuarios = [
 sin_mesa = [u for u in usuarios if not u.get("mesa_id") or u["mesa_id"] == "pendiente"]
 datos = mesas_sheet.get_all_records()
 
-# Procesar mesas
+# 🧩 Procesar mesas
 mesas = []
 for fila in datos:
     jugadores = [fila.get(f"Jugador {i}") for i in range(1, 5) if fila.get(f"Jugador {i}")]
@@ -41,28 +43,40 @@ for fila in datos:
     }
     mesas.append(mesa)
 
+# ⚙️ Configuración visual del panel
 st.set_page_config(page_title="Panel Admin", layout="wide")
 st.title("🎮 Panel de Control del Administrador")
 st.subheader("Mesas Activas")
 st.subheader("📢 Sala de espera")
 
-# 📢 Sala de espera — ahora como bandeja de entrada
-st.subheader("📢 Sala de espera")
-
+# 📥 Preguntas pendientes simuladas
 preguntas_pendientes = st.session_state.get("preguntas_pendientes", [])
 st.session_state["preguntas_pendientes"] = [
     {"usuario": "jugador1", "id": "123456", "texto": "¿Cuándo empieza la partida?"},
     {"usuario": "jugador2", "id": "789012", "texto": "No me asignaron mesa"}
 ]
 
-import firebase_admin
-from firebase_admin import credentials, db
-import datetime  # para timestamp en logs
-
-# Inicializar Firebase solo una vez
+# 🔌 Inicializar Firebase correctamente
 if not firebase_admin._apps:
     cred_dict = st.secrets["firebase"]
     cred = credentials.Certificate(cred_dict)
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': 'https://panel-admin-7bdd2.firebaseio.com'
+    })
+
+# 🧪 Probar conexión con log de inicio
+try:
+    test_ref = db.reference("test_bot")
+    test_ref.set({
+        "mensaje": "Bot conectado correctamente",
+        "timestamp": datetime.datetime.now().isoformat(),
+        "origen": "streamlit_app.py",
+        "admin_id": st.session_state.get("admin_id", "desconocido")
+    })
+    print("✅ Conexión a Firebase exitosa")
+except Exception as e:
+    print(f"❌ Error conectando a Firebase: {e}")
+
  # ajusta si usas st.secrets
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://panel-admin-7bdd2.firebaseio.com'
@@ -455,6 +469,10 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
+
+
 
 
 
