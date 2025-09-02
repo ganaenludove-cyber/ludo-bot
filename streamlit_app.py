@@ -71,14 +71,6 @@ st.session_state["preguntas_pendientes"] = [
     {"usuario": "jugador2", "id": "789012", "texto": "No me asignaron mesa"}
 ]
 
-# 🔌 Inicializar Firebase correctamente
-if not firebase_admin._apps:
-    cred_dict = st.secrets["firebase"].copy()
-    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
-    cred = credentials.Certificate(cred_dict)
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': cred_dict["databaseURL"]
-    })
 
 # 🧪 Probar conexión con log de inicio
 try:
@@ -484,7 +476,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
 
 
 
