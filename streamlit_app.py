@@ -100,6 +100,15 @@ def guardar_mensaje_en_firebase(mesa_id, mensaje):
     except Exception as e:
         st.error(f"❌ Error al guardar mensaje en Firebase: {e}")
 
+# Convierte una clave con \n en saltos reales para usar en TOML
+def format_private_key(raw_key):
+    import json
+    parsed = json.loads(f'"{raw_key}"')  # interpreta los \n como saltos reales
+    return f'"""{parsed}"""'
+
+# Ejemplo de uso
+raw_key = "-----BEGIN PRIVATE KEY-----\\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCWFBrVN23r3XeG\\n...\\n-----END PRIVATE KEY-----\\n"
+print(format_private_key(raw_key))
 
 
 def responder_pregunta_por_id(id_pregunta, respuesta):
