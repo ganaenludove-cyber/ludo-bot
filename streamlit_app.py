@@ -139,13 +139,6 @@ for mesa in mesas:
         else:
             st.info("Sin mensajes registrados.")
 
-# 📥 Preguntas pendientes simuladas
-preguntas_pendientes = st.session_state.get("preguntas_pendientes", [])
-st.session_state["preguntas_pendientes"] = [
-    {"usuario": "jugador1", "id": "123456", "texto": "¿Cuándo empieza la partida?"},
-    {"usuario": "jugador2", "id": "789012", "texto": "No me asignaron mesa"}
-]
-
 # 🧪 Probar conexión con log de inicio
 try:
     test_ref = db.reference("test_bot")
