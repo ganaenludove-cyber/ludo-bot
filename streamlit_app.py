@@ -57,7 +57,7 @@ datos = mesas_sheet.get_all_records()
 
 # 🔌 Inicializar Firebase
 if not firebase_admin._apps:
-    cred_dict = st.secrets["firebase"].copy()
+    cred_dict = dict(st.secrets["firebase"])
     if "\\n" in cred_dict["private_key"]:
         cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
     cred = credentials.Certificate(cred_dict)
@@ -505,8 +505,6 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
-
-
 
 
 
