@@ -167,9 +167,6 @@ def guardar_mensaje_en_firebase(mesa_id, mensaje):
     except Exception as e:
         st.error(f"❌ Error al guardar mensaje en Firebase: {e}")
 
-# 🧾 Vista previa de clave (opcional para depurar)
-st.text_area("🔐 Clave Google (preview)", creds_dict["private_key"], height=200)
-
 def responder_pregunta_por_id(id_pregunta, respuesta):
     try:
         ref = db.reference("preguntas")
@@ -544,4 +541,5 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
 
