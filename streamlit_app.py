@@ -4,6 +4,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime
+import json
 
 # ⚙️ Configuración visual del panel
 st.set_page_config(page_title="Panel Admin", layout="wide")
@@ -13,20 +14,20 @@ st.subheader("📢 Sala de espera")
 
 # 🔍 Verificar que las claves estén disponibles
 st.write("🔍 Secciones disponibles en secrets:", list(st.secrets.keys()))
-if "firebase" not in st.secrets or "google" not in st.secrets:
-    st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google] estén definidos en Secrets.")
+if "firebase" not in st.secrets or "google_json" not in st.secrets:
+    st.error("❌ Faltan claves en la configuración de Streamlit. Verifica que [firebase] y [google_json] estén definidos en Secrets.")
     st.stop()
 
-# 🔐 Autenticación con Google Sheets
+# 🔐 Autenticación con Google Sheets usando JSON plano
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive",
 ]
-creds_dict = st.secrets["google"].copy()
-if "\\n" in creds_dict["private_key"]:
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
+raw_json = st.secrets["google_json"]["key"]
+creds_dict = json.loads(raw_json)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
