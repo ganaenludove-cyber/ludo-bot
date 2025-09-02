@@ -77,10 +77,6 @@ try:
 except Exception as e:
     print(f"❌ Error conectando a Firebase: {e}")
 
- # ajusta si usas st.secrets
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://panel-admin-7bdd2.firebaseio.com'
-    })
 # Cargar mensajes desde Firebase
 try:
     ref = db.reference(f"mensajes/{mesa['id']}")
@@ -469,6 +465,8 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
 
 
 
