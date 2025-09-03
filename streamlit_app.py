@@ -139,6 +139,31 @@ for mesa in mesas:
         else:
             st.info("Sin mensajes registrados.")
 
+# 📥 Preguntas pendientes reales desde Firebase
+try:
+    # Referencia al nodo donde guardas las preguntas
+    ref = db.reference("preguntas")
+    todas = ref.get()
+
+    # Filtrar solo las que no están respondidas
+    preguntas_pendientes = [
+        {
+            "usuario": p.get("usuario", "Desconocido"),
+            "id": p.get("id", ""),
+            "texto": p.get("texto", "")
+        }
+        for p in (todas.values() if todas else [])
+        if p.get("estado") != "respondida"
+    ]
+
+except Exception as e:
+    preguntas_pendientes = []
+    st.warning(f"⚠️ No se pudieron cargar las preguntas: {e}")
+
+# Guardar en session_state para que otras partes del panel lo usen
+st.session_state["preguntas_pendientes"] = preguntas_pendientes
+
+
 # 🧪 Probar conexión con log de inicio
 try:
     test_ref = db.reference("test_bot")
@@ -534,5 +559,7 @@ def render_botones(mesa):
 
         if st.button("💸 Reembolsar jugadores", key=f"btn_reembolso_{mesa['id']}"):
             reembolsar_mesa(mesa)
+
+
 
 
